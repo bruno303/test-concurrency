@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import com.example.demo.exceptions.FailedLockException;
 import com.example.demo.locker.Locker;
 
 @Component
@@ -30,9 +31,9 @@ public class PrimeiroTesteRunner implements CommandLineRunner {
 		
 		executions.add(runAsync(() -> execute("a")));
 		executions.add(runAsync(() -> execute("a")));
-		executions.add(runAsync(() -> execute("c")));
-		executions.add(runAsync(() -> execute("d")));
-		executions.add(runAsync(() -> execute("e")));
+//		executions.add(runAsync(() -> execute("c")));
+//		executions.add(runAsync(() -> execute("d")));
+//		executions.add(runAsync(() -> execute("e")));
 		
 		CompletableFuture.allOf(executions.toArray(new CompletableFuture[0])).join();
 	}
@@ -41,10 +42,19 @@ public class PrimeiroTesteRunner implements CommandLineRunner {
 		return CompletableFuture.runAsync(runnable);
 	}
 	
+	private void tryLock(String resource) throws FailedLockException {
+		if (!locker.tryLock(resource)) {
+			throw new FailedLockException();
+		}
+	}
+	
 	private void execute(String resource) {
 		try {
-			locker.lock(resource);
+			tryLock(resource);
+			tryLock(resource);
 			testMethod(resource);
+		} catch (FailedLockException e) {
+			e.printStackTrace();
 		} finally {
 			locker.release(resource);
 		}
